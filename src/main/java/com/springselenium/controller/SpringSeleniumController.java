@@ -15,9 +15,9 @@ public class SpringSeleniumController {
         this.springSeleniumService = springSeleniumService;
     }
 
-    @GetMapping("/selenium")
+    @GetMapping("/review/getProduct")
     public String seleniumStart() throws JSONException {
-        String url = "8198835007";
+        String url = "9541035245";
         return springSeleniumService.mainFunction(url);
     }
 }
