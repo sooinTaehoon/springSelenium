@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.springselenium.config.dao.PostgresDBMapper">
+    <insert id="setReviewList" parameterType="com.springselenium.domain.ReviewVO" useGeneratedKeys="true" keyProperty="id">
+        insert into review (user_id, product_name, title, text, date, shopping_list, grade, state, img, site, img_count)
+        values
+        <foreach collection="list" item="review" separator=",">
+            (#{review.user_id}, #{review.product_name}, #{review.title}, #{review.text}, #{review.date},
+             #{review.shopping_list}, #{review.grade}, #{review.state}, #{review.img}, #{review.site}, #{review.img_count})
+        </foreach>
+    </insert>
+</mapper>
