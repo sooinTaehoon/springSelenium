@@ -57,16 +57,6 @@ public class SpringSeleniumService {
 
         try {
 
-            ReviewVO recentReviewVO = postgresDBMapper.getRecentReview(url);
-
-            if (recentReviewVO != null) {
-
-                System.out.println(recentReviewVO.getDate());
-            } else {
-
-                System.out.println("해당 URL에 대한 최신 리뷰가 없습니다.");
-            }
-
             driver.get("https://smartstore.naver.com/kwacoal/products/" + url);
 
             try {
@@ -245,10 +235,6 @@ public class SpringSeleniumService {
                 resultObject.put("resultMessage", e.getMessage());
                 resultObject.put("resultCode", "false");
             }
-        } catch (SQLException e) {
-
-            resultObject.put("resultMessage", "이전 첫 리뷰 가져오기 에러");
-            resultObject.put("resultCode", "false");
         } catch (Exception e) {
 
             resultObject.put("resultMessage", "페이지 접속 에러");
@@ -259,5 +245,25 @@ public class SpringSeleniumService {
         }
 
         return resultObject.toString();
+    }
+
+    public String crawlingRunCehck(String url) {
+
+        try {
+
+            ReviewVO recentReviewVO = postgresDBMapper.getRecentReview(url);
+
+            if (recentReviewVO != null) {
+
+                System.out.println(recentReviewVO.getDate());
+            } else {
+
+                System.out.println("해당 URL에 대한 최신 리뷰가 없습니다.");
+            }
+        } catch (SQLException e) {
+
+        }
+
+        return "";
     }
 }

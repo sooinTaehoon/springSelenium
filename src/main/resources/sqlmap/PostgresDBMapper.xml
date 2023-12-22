@@ -12,6 +12,6 @@
     </insert>
 
     <select id="getRecentReview" resultType="com.springselenium.domain.ReviewVO" parameterType="java.lang.String">
-        select * from review where product_id = ${product_id} order by date desc limit 1
+        select * from review where product_id = #{product_id} order by date desc limit 1
     </select>
 </mapper>
