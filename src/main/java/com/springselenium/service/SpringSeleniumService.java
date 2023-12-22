@@ -57,6 +57,16 @@ public class SpringSeleniumService {
 
         try {
 
+            ReviewVO recentReviewVO = postgresDBMapper.getRecentReview(url);
+
+            if (recentReviewVO != null) {
+
+                System.out.println(recentReviewVO.getDate());
+            } else {
+
+                System.out.println("해당 URL에 대한 최신 리뷰가 없습니다.");
+            }
+
             driver.get("https://smartstore.naver.com/kwacoal/products/" + url);
 
             try {
@@ -66,6 +76,8 @@ public class SpringSeleniumService {
                 if (driver.findElements(By.className("_22kNQuEXmb")).size() > 0) { // 제목 없을 시 상품 없음으로 취급
 
                     product_name = wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("_22kNQuEXmb"))).getText(); // 제목 엘리먼트
+
+                    resultObject.put("product_name", product_name);
 
                     wait.until(ExpectedConditions.elementToBeClickable(By.className("N=a:tab.review"))).click(); // 리뷰 탭 지정
 
@@ -91,8 +103,6 @@ public class SpringSeleniumService {
                                 ReviewVO reviewVO = new ReviewVO();
 
                                 JSONObject reviewObject = new JSONObject();
-
-                                reviewObject.put("product_name", product_name);
                                 reviewObject.put("user_id", element.findElements(By.cssSelector(".iWGqB6S4Lq ._2L3vDiadT9")).get(0).getText());
                                 reviewObject.put("grade", element.findElement(By.className("_15NU42F3kT")).getText());
                                 reviewObject.put("date", element.findElements(By.cssSelector(".iWGqB6S4Lq ._2L3vDiadT9")).get(1).getText());
@@ -129,9 +139,9 @@ public class SpringSeleniumService {
                                 reviewObject.put("imgResult", "false");
 
                                 reviewArray.put(reviewObject);
-                                
+
                                 /* DB에 담을 reviewVO 설정 */
-                                reviewVO.setProduct_name(reviewObject.get("product_name").toString());
+                                reviewVO.setProduct_name(product_name);
                                 reviewVO.setUser_id(reviewObject.get("user_id").toString());
                                 reviewVO.setGrade(Integer.parseInt(reviewObject.get("grade").toString()));
                                 reviewVO.setDate(reviewObject.get("date").toString().replaceAll("[^0-9]", ""));
@@ -139,6 +149,7 @@ public class SpringSeleniumService {
                                 reviewVO.setState(reviewObject.get("state").toString());
                                 reviewVO.setText(reviewObject.get("text").toString());
                                 reviewVO.setSite("naver");
+                                reviewVO.setProduct_id(url);
 
                                 reviewVOList.add(reviewVO);
                             }
@@ -212,7 +223,7 @@ public class SpringSeleniumService {
 
                     try {
 
-        //                postgresDBMapper.setReviewList(reviewVOList);
+//                        postgresDBMapper.setReviewList(reviewVOList);
                     } catch (Exception e) {
                         System.out.println("DB 저장 실패\n" + e.getMessage());
                     }
@@ -234,6 +245,10 @@ public class SpringSeleniumService {
                 resultObject.put("resultMessage", e.getMessage());
                 resultObject.put("resultCode", "false");
             }
+        } catch (SQLException e) {
+
+            resultObject.put("resultMessage", "이전 첫 리뷰 가져오기 에러");
+            resultObject.put("resultCode", "false");
         } catch (Exception e) {
 
             resultObject.put("resultMessage", "페이지 접속 에러");

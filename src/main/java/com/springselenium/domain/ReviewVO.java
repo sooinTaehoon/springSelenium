@@ -15,6 +15,7 @@ public class ReviewVO {
     private String img;
     private String site;
     private int img_count;
+    private String product_id;
 
     public int getId() { return id; }
 
@@ -63,4 +64,8 @@ public class ReviewVO {
     public int getImg_count() { return img_count; }
 
     public void setImg_count(int img_count) { this.img_count = img_count; }
+
+    public String getProduct_id() { return product_id; }
+
+    public void setProduct_id(String product_id) { this.product_id = product_id; }
 }
