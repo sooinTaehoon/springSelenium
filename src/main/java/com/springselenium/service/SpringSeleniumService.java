@@ -7,6 +7,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.openqa.selenium.*;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -14,10 +15,9 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class SpringSeleniumService {
@@ -72,7 +72,7 @@ public class SpringSeleniumService {
                     wait.until(ExpectedConditions.elementToBeClickable(By.className("N=a:tab.review"))).click(); // 리뷰 탭 지정
 
                     /* 리뷰 가져오기 */
-                    int reviewCount = Integer.parseInt(wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("_3HJHJjSrNK"))).getText());
+                    Long reviewCount = Long.parseLong(wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("_3HJHJjSrNK"))).getText());
 
                     resultObject.put("count", reviewCount);
 
@@ -80,7 +80,19 @@ public class SpringSeleniumService {
 
                         wait.until(ExpectedConditions.elementToBeClickable(By.className("N=a:rvs.srecent"))).click(); // 최신순 설정
 
-                        int pages = reviewCount % 20 == 0 ? reviewCount / 20 : reviewCount / 20 + 1;
+                        Thread.sleep(500);
+
+                        ReviewVO recentReview = postgresDBMapper.getRecentReview(url);
+                        int recentReviewDate = Integer.parseInt(recentReview == null ? "0" : recentReview.getDate());
+
+                        boolean quitFlag = false;
+
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
+                        int today = Integer.parseInt(sdf.format(new Date()));
+
+                        int imgCount = 0;
+
+                        Long pages = reviewCount % 20 == 0 ? reviewCount / 20 : reviewCount / 20 + 1;
 
                         for (int i = 0; i < pages; i++) { // 페이지 돌기
 
@@ -90,12 +102,22 @@ public class SpringSeleniumService {
 
                             for (WebElement element : elements) { // 리뷰 획득
 
+                                int elementDate = Integer.parseInt(element.findElements(By.cssSelector(".iWGqB6S4Lq ._2L3vDiadT9")).get(1).getText().toString().replaceAll("[^0-9]", ""));
+
+                                if (elementDate == today) continue; // 전날 까지의 리뷰만 획득
+
+                                if (elementDate <= recentReviewDate) { // elementDate를 recentReviewDate와 비교해 같거나 작으면 break
+
+                                    quitFlag = true;
+                                    break;
+                                }
+
                                 ReviewVO reviewVO = new ReviewVO();
 
                                 JSONObject reviewObject = new JSONObject();
                                 reviewObject.put("user_id", element.findElements(By.cssSelector(".iWGqB6S4Lq ._2L3vDiadT9")).get(0).getText());
                                 reviewObject.put("grade", element.findElement(By.className("_15NU42F3kT")).getText());
-                                reviewObject.put("date", element.findElements(By.cssSelector(".iWGqB6S4Lq ._2L3vDiadT9")).get(1).getText());
+                                reviewObject.put("date", elementDate);
                                 reviewObject.put("shopping_list", element.findElement(By.cssSelector("._3HKlxxt8Ii ._2FXNMst_ak")).getText().split("\n")[0]);
 
                                 List<WebElement> bodyStates = element.findElements(By.cssSelector("._3F8sJXhFeW ._2L3vDiadT9"));
@@ -142,7 +164,12 @@ public class SpringSeleniumService {
                                 reviewVO.setProduct_id(url);
 
                                 reviewVOList.add(reviewVO);
+
+                                // 이미지 개수 세기
+                                if (element.findElements(By.className("_3Bbv1ae9fg")).size() > 0) imgCount++;
                             }
+
+                            if (quitFlag) break; // 종료 플래그가 트루면 break
 
                             WebElement next = driver.findElement(By.className("_2Ar8-aEUTq"));
 
@@ -152,11 +179,11 @@ public class SpringSeleniumService {
                         /* 이미지 가져오기 */
                         if (driver.findElements(By.className("_3z_fNGjkmL")).size() != 0) { // 이미지 리뷰가 있다면
 
-                            int totalPhotoReview = Integer.parseInt(wait.until(ExpectedConditions.visibilityOfElementLocated(By.className("_3z_fNGjkmL"))).getText());
+                            Thread.sleep(1000);
 
                             wait.until(ExpectedConditions.elementToBeClickable(By.className("N=a:rvs.pimg"))).click(); // 전체 이미지 보기
 
-                            for (int i = 0; i < totalPhotoReview; i++) { // 포토 리뷰수만큼 이미지 주소 저장
+                            for (int i = 0; i < imgCount; i++) { // 포토 리뷰수만큼 이미지 주소 저장
 
                                 Thread.sleep(1000);
 
@@ -211,11 +238,17 @@ public class SpringSeleniumService {
                     resultObject.put("resultCode", "true");
                     resultObject.put("dataList", reviewArray);
 
-                    try {
+                    if (reviewVOList.size() > 0) {
 
-//                        postgresDBMapper.setReviewList(reviewVOList);
-                    } catch (Exception e) {
-                        System.out.println("DB 저장 실패\n" + e.getMessage());
+                        try {
+
+                            Collections.reverse(reviewVOList);
+
+                            postgresDBMapper.setReviewList(reviewVOList);
+                        } catch (Exception e) {
+
+                            System.out.println("DB 저장 실패\n" + e.getMessage());
+                        }
                     }
                 } else {
 
@@ -245,25 +278,5 @@ public class SpringSeleniumService {
         }
 
         return resultObject.toString();
-    }
-
-    public String crawlingRunCehck(String url) {
-
-        try {
-
-            ReviewVO recentReviewVO = postgresDBMapper.getRecentReview(url);
-
-            if (recentReviewVO != null) {
-
-                System.out.println(recentReviewVO.getDate());
-            } else {
-
-                System.out.println("해당 URL에 대한 최신 리뷰가 없습니다.");
-            }
-        } catch (SQLException e) {
-
-        }
-
-        return "";
     }
 }
